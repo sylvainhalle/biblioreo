@@ -1,4 +1,4 @@
-\documentclass[12pt]{article}
+\documentclass[10pt]{article}
 
 %% Packages
 \usepackage[french]{babel}
@@ -11,12 +11,21 @@
 \usepackage{luacode}
 \usepackage{graphicx}
 \usepackage{markdown}
+\usepackage{tcolorbox}
+\usepackage{multicol}
+\usepackage{longtable}
 
 %% Style
 \setmainfont{TeX Gyre Termes}
-\newcommand{\titre}[1]{\textit{#1} \\}
+\newcommand{\titre}[1]{\textit{#1}}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{8pt}
+\setlength{\columnseprule}{0.4pt}
+
+%% Commentaires
+\definecolor{darkorange}{rgb}{1.0, 0.55, 0.0}
+\definecolor{lightgoldenrodyellow}{rgb}{0.98, 0.98, 0.82}
+\newcommand{\auteur}[3]{\begin{tcolorbox}[left=0.3ex,right=0.3ex,top=0.3ex,bottom=0.3ex,boxrule=0.3pt,hbox,colback=#3,colframe=#2,rounded corners=all]\sffamily #1\end{tcolorbox}}
 
 %% Document
 \begin{document}
@@ -25,7 +34,10 @@
 \author{}
 \maketitle
 
+\raggedright
+%\begin{multicols}{2}
 \directlua{dofile("Bibliographie.lua")}
+%\end{multicols}
 
 \end{document}
 %% :mode=latex:folding=explicit:

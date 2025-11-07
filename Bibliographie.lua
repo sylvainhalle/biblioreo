@@ -1,6 +1,12 @@
 -- Dependencies
 local bibtex = require("lua-bibtex-parser")
 
+function safe_texprint(s)
+  if not s then return end
+  s = s:gsub("[\n\r]+", " ")  -- remplace les \n par espaces
+  tex.print(s)
+end
+
 -- Abréger le champ author d'une entrée BibTeX
 -- Exemple d'entrée: "John Smith and Jane Doe and Foo Bar Baz"
 -- Exemple de sortie: "J. Smith, J. Doe, F. Baz" ou "J. Smith et al."
@@ -50,7 +56,7 @@ function shorten_authors(authors_field)
   -- Abrège selon le nombre d’auteurs
   local n = #authors
   if n > 3 then
-    return shorten_one(authors[1]) .. " et al."
+    return shorten_one(authors[1]) .. " \\textit{et al.\\@}"
   else
     local short = {}
     for _, a in ipairs(authors) do
@@ -64,20 +70,26 @@ end
 local bib_file = io.open("Bibliographie.bib", "r")
 local bib_content = bib_file:read("*a")
 bib_file:close()
-local dict = {}
 local library, exceptions = bibtex.parse(bib_content, {})
 for i = 1, #library.entries do
   local fields = library.entries[i].fields_dict
-  tex.print("\\noindent " .. shorten_authors(fields["author"].value):gsub("[\n\r]", " ") .. ". ")
-  tex.print("(" .. fields["year"].value .. "). ")
-  tex.print("\\titre{" .. fields["title"].value .. "}\n")
-  if (fields["comment-sylvain"]) then
-    --tex.print("\\begin{markdown}\n" .. fields["comment-sylvain"].value .. "\n\\end{markdown}")
-    tex.print("\\begin{minipage}{6.5in}\\small\n")
-    tex.print("\\begin{markdown}\n")
-    tex.print(fields["comment-sylvain"].value)
-    tex.print("\n\\end{markdown}\n")
-    tex.print("\\end{minipage}\n")
+  safe_texprint("\\noindent " .. shorten_authors(fields["author"].value):gsub("[\n\r]", " ") .. ". ")
+  safe_texprint("(" .. fields["year"].value .. "). ")
+  safe_texprint("\\titre{" .. fields["title"].value .. "}")
+  safe_texprint("\\vskip 1pt")
+  for key, fld in pairs(fields) do
+    if fld["name"]:find("^comment-") then
+      local author = string.gsub(fld["name"], "comment%-", "")
+      --safe_texprint("\\rule{0.25in}{0in}")
+      safe_texprint("\\begin{longtable}{p{0.5in}p{5in}}\n\\hline\n")
+      safe_texprint("\\auteur{" .. author .. "}{darkorange}{lightgoldenrodyellow} & ")
+      --safe_texprint("\\begin{minipage}{5.5in}\\small\n")
+      safe_texprint("\\begin{markdown}\n")
+      safe_texprint(fields["comment-sylvain"].value)
+      safe_texprint("\n\\end{markdown}\n")
+      --safe_texprint("\\end{minipage}\n")
+      safe_texprint("\\end{longtable}")
+    end
   end
-  tex.print("\n\n");
+  safe_texprint("\n\n");
 end
