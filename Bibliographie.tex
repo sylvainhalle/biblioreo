@@ -1,0 +1,31 @@
+\documentclass[12pt]{article}
+
+%% Packages
+\usepackage[french]{babel}
+\usepackage{fontspec}
+\usepackage{fullpage}
+\usepackage{comment}
+\usepackage[x11names]{xcolor}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{luacode}
+\usepackage{graphicx}
+\usepackage{markdown}
+
+%% Style
+\setmainfont{TeX Gyre Termes}
+\newcommand{\titre}[1]{\textit{#1} \\}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{8pt}
+
+%% Document
+\begin{document}
+
+\title{Résumé de la bibliographie}
+\author{}
+\maketitle
+
+\directlua{dofile("Bibliographie.lua")}
+
+\end{document}
+%% :mode=latex:folding=explicit:
