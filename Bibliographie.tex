@@ -14,6 +14,9 @@
 \usepackage{tcolorbox}
 \usepackage{multicol}
 \usepackage{longtable}
+\usepackage{array} % si pas déjà
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash\setlength{\parskip}{0pt}\vspace{0pt}}p{#1}}
+
 
 %% Style
 \setmainfont{TeX Gyre Termes}
@@ -25,7 +28,15 @@
 %% Commentaires
 \definecolor{darkorange}{rgb}{1.0, 0.55, 0.0}
 \definecolor{lightgoldenrodyellow}{rgb}{0.98, 0.98, 0.82}
-\newcommand{\auteur}[3]{\begin{tcolorbox}[left=0.3ex,right=0.3ex,top=0.3ex,bottom=0.3ex,boxrule=0.3pt,hbox,colback=#3,colframe=#2,rounded corners=all]\sffamily #1\end{tcolorbox}}
+\newcommand{\auteur}[3]{%
+  \raisebox{0pt}[0pt][0pt]{%
+    \begin{tcolorbox}[left=0.3ex,right=0.3ex,top=0.3ex,bottom=0.3ex,
+                      boxrule=0.3pt,hbox,colback=#3,colframe=#2,rounded corners=all]
+      \sffamily #1
+    \end{tcolorbox}%
+  }%
+}
+
 
 %% Document
 \begin{document}
