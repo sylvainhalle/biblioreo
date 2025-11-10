@@ -91,7 +91,7 @@ local function build_groups_tree(library)
 
     local paths = parse_groups_field(groups_raw)
     if #paths == 0 then
-      local node = ensure_child(root, "_Sans groupe")
+      local node = ensure_child(root, "Sans groupe")
       table.insert(node.entries, i)
     else
       for _, segs in ipairs(paths) do
