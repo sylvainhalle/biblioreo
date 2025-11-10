@@ -1,7 +1,9 @@
 # Une bibliographie partagée
 
-Ce dépôt privé contient l'ensemble des références colligées dans le cadre du projet de
-Lionel.
+Ce dépôt privé contient l'ensemble des références colligées dans le cadre d'un projet
+de recherche collaboratif.
+
+<p><a href="https://www.overleaf.com/docs?snip_uri=https://github.com/sylvainhalle/biblioreo/archive/refs/heads/main.zip"><img src="ouvrir-overleaf-16.png?raw=true" alt="Ouvrir dans Overleaf"/></a></p>
 
 ## Prérequis
 
@@ -33,9 +35,10 @@ Le dépôt contient deux parties:
 
 On obtient une première copie du dépôt en tapant:
 
-    git clone git@github.com:sylvainhalle/bibtex-lionel.git
+    git clone git@github.com:sylvainhalle/xxx.git
 
-...ce qui créera un dossier local appelé `bibtex-lionel` avec le contenu du
+...où xxx est le nom particulier donné à une instance de ce gabarit. Ceci 
+créera un dossier local appelé `xxx` avec le contenu du
 dépôt.
 
 ### Modifier la bibliographie
@@ -72,6 +75,15 @@ grande importance la plupart du temps.
 Officialise les modifications locales sur la copie du dépôt se trouvant sur le serveur.
 Dès ce moment, tous les autres utilisateurs lançant la commande `git pull` recevront
 la version ainsi mise à jour du dépôt.
+
+## Afficher un résumé
+
+Un script permet de compiler une version "résumé" du contenu de la bibliographie. Pour
+ce faire, on tape:
+
+    lualatex Bibliographie
+
+...qui se chargera de produire un document appelé `Bibliographie.pdf`.
 
 ## Quelques bonnes pratiques
 
