@@ -7,35 +7,80 @@
 \usepackage{comment}
 \usepackage[x11names]{xcolor}
 \usepackage{hyperref}
+\usepackage{lua-ul}
 \usepackage{microtype}
 \usepackage{luacode}
 \usepackage{graphicx}
 \usepackage{markdown}
-\usepackage{tcolorbox}
+\usepackage[skins]{tcolorbox}
+\tcbuselibrary{breakable}
+\tcbuselibrary{hooks}%YOU MUST USE THIS FOR <extras last pre> KEY
 \usepackage{multicol}
 \usepackage{longtable}
-\usepackage{array} % si pas déjà
-\newcolumntype{L}[1]{>{\raggedright\arraybackslash\setlength{\parskip}{0pt}\vspace{0pt}}p{#1}}
+\usepackage{titlesec}
+\usepackage{twemojis}
+\usepackage{array}
 
 
 %% Style
+\hypersetup{
+  colorlinks   = true, %Colours links instead of ugly boxes
+  urlcolor     = DodgerBlue4, %Colour for external hyperlinks
+  linkcolor    = DodgerBlue4, %Colour of internal links
+  citecolor   = red %Colour of citations
+}
 \setmainfont{TeX Gyre Termes}
-\newcommand{\titre}[1]{\textit{#1}}
+\setsansfont{TeX Gyre Heros}
+\newcommand{\titre}[1]{#1}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{8pt}
 \setlength{\columnseprule}{0.4pt}
+\titleformat{\section}{\sffamily\Large}{\thesection}{1em}{}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash\setlength{\parskip}{0pt}\vspace{0pt}}p{#1}}
+
+\makeatletter
+\renewcommand{\maketitle}{
+    \begin{center}
+        {\sffamily\Large \@title} \\[1em]
+        %{\large \@author} \\[1em]
+        {\sffamily\small \@date}
+    \end{center}
+}
+\makeatother
 
 %% Commentaires
 \definecolor{darkorange}{rgb}{1.0, 0.55, 0.0}
 \definecolor{lightgoldenrodyellow}{rgb}{0.98, 0.98, 0.82}
+\definecolor{paleblack}{rgb}{0.2, 0.2, 0.2}
 \newcommand{\auteur}[3]{%
   \raisebox{0pt}[0pt][0pt]{%
-    \begin{tcolorbox}[left=0.3ex,right=0.3ex,top=0.3ex,bottom=0.3ex,
+    \begin{tcolorbox}[shadow={1pt}{-0.75pt}{0mm}{black!30!white},enhanced,left=0.2ex,right=0.2ex,top=0.2ex,bottom=0.2ex,
                       boxrule=0.3pt,hbox,colback=#3,colframe=#2,rounded corners=all]
-      \sffamily #1
+      \sffamily\bfseries\scriptsize #1
     \end{tcolorbox}%
   }%
 }
+\newcommand{\chatbox}{%
+  \raisebox{0pt}[0pt][0pt]{%
+    \begin{tcolorbox}[shadow={1pt}{-0.75pt}{0mm}{black!30!white},enhanced,left=0.2ex,right=0.2ex,top=0.2ex,bottom=0.2ex,
+                      boxrule=0.3pt,hbox,colback=DarkSeaGreen1,colframe=DarkSeaGreen4,rounded corners=all]
+      \sffamily\footnotesize \includegraphics[height=8pt]{chatlogo}
+    \end{tcolorbox}%
+  }%
+}
+\newcommand{\bibkey}[1]{%
+  \raisebox{0pt}[0pt][0pt]{%
+    \begin{tcolorbox}[shadow={1pt}{-0.75pt}{0mm}{black!30!white},enhanced,left=0.1ex,right=0.1ex,top=0.1ex,bottom=0.1ex,
+                      sharp corners=south,boxrule=0.3pt,hbox,colback=Azure1,colframe=Cyan4]
+      \ttfamily\scriptsize \twemoji{key} \color{gray} #1
+    \end{tcolorbox}%
+  }%
+}
+
+\newenvironment{insidebox}{%
+  %\raisebox{0pt}[0pt][0pt]{%
+  \vspace{-10pt}
+  \begin{tcolorbox}[colback=black!1!white,sharp corners=northwest,boxrule=0.3pt,shadow={1pt}{-0.75pt}{0mm}{black!30!white}]}{\end{tcolorbox}}
 
 
 %% Document
@@ -45,10 +90,7 @@
 \author{}
 \maketitle
 
-\raggedright
-%\begin{multicols}{2}
 \directlua{dofile("Bibliographie.lua")}
-%\end{multicols}
 
 \end{document}
 %% :mode=latex:folding=explicit:

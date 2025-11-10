@@ -4,6 +4,8 @@
 
 -- Dépendances
 local bibtex = require("lua-bibtex-parser")
+local md = require("markdown")
+local convert = md.new()
 
 -- Impression sûre vers TeX (évite U+000A dans la police)
 local function safe_texprint(s)
@@ -132,6 +134,210 @@ local function walk_tree(node, cb, path, depth)
   end
 end
 
+-- ========= utils =========
+local function trim(s) return (s and s:gsub("^%s+",""):gsub("%s+$","")) or s end
+local function unbrace(s)
+  if type(s) ~= "string" then return s end
+  s = trim(s)
+  if s and #s >= 2 then
+    local a,b = s:sub(1,1), s:sub(-1,-1)
+    if (a == "{" and b == "}") or (a == '"' and b == '"') then
+      return s:sub(2, -2)
+    end
+  end
+  return s
+end
+
+local function lower(s) return type(s)=="string" and s:lower() or s end
+local function emit(s)
+  if _G.tex and tex.sprint then tex.sprint(s) else print(s) end
+end
+
+-- ========= robust get_field =========
+local function get_field(entry, wanted_name)
+  if type(entry) ~= "table" then return nil end
+  if not wanted_name or wanted_name == "" then return nil end
+  local wanted = wanted_name:lower()
+
+  -- 0) parfois à la racine
+  for k,v in pairs(entry) do
+    if type(k)=="string" and k:lower()==wanted and type(v)=="string" then
+      return unbrace(v)
+    end
+  end
+
+  local f = entry.fields
+  if type(f) ~= "table" then return nil end
+
+  -- 1) dictionnaire: clés -> valeurs
+  local is_list = (#f > 0 and type(f[1])=="table")
+  if not is_list then
+    for k,v in pairs(f) do
+      if type(k)=="string" and k:lower()==wanted and type(v)=="string" then
+        return unbrace(v)
+      end
+    end
+  end
+
+  -- 2) liste { {name=..., value=...}, ... }
+  if is_list then
+    for _,item in ipairs(f) do
+      local name = lower(item.name or item.key)
+      if name == wanted then
+        local v = item.value or item.val or item.text
+        if type(v)=="string" and v~="" then
+          return unbrace(v)
+        end
+      end
+    end
+  end
+
+  return nil
+end
+
+-- ===== Venue: extraction simple et robuste journal/booktitle =====
+Venue = Venue or {}
+
+function Venue._trim(s)  return type(s)=="string" and (s:gsub("^%s+",""):gsub("%s+$","")) or s end
+function Venue._unbrace(s)
+  if type(s) ~= "string" then return s end
+  s = Venue._trim(s)
+  if s and #s >= 2 then
+    local a,b = s:sub(1,1), s:sub(-1)
+    if (a=='{' and b=='}') or (a=='"' and b=='"') then
+      return s:sub(2,-2)
+    end
+  end
+  return s
+end
+
+-- Émission: LuaLaTeX => tex.sprint, sinon print
+function Venue._emit(s)
+  if _G.tex and tex.sprint then
+    tex.sprint(tostring(s or ""))
+  else
+    print(tostring(s or ""))
+  end
+end
+
+-- Récupère un champ:
+--  - à la racine (entry[name])
+--  - dans entry.fields dict (fields[name])
+--  - dans entry.fields liste { {name=..., value=...}, ... }
+function Venue.get_field(entry, name)
+  if type(entry) ~= "table" or not name then return nil end
+  local lname = name:lower()
+
+  -- racine
+  for k,v in pairs(entry) do
+    if type(k)=="string" and k:lower()==lname and type(v)=="string" then
+      return Venue._unbrace(v)
+    end
+  end
+
+  local f = entry.fields
+  if type(f) ~= "table" then return nil end
+
+  -- dict
+  local is_list = (#f > 0 and type(f[1])=="table")
+  if not is_list then
+    for k,v in pairs(f) do
+      if type(k)=="string" and k:lower()==lname and type(v)=="string" then
+        return Venue._unbrace(v)
+      end
+    end
+  end
+
+  -- liste {name,value}
+  if is_list then
+    for _, item in ipairs(f) do
+      local ik = item and (item.name or item.key)
+      if type(ik)=="string" and ik:lower()==lname then
+        local v = item.value or item.val or item.text
+        if type(v)=="string" and v~="" then
+          return Venue._unbrace(v)
+        end
+      end
+    end
+  end
+
+  return nil
+end
+Venue._get_field = Venue.get_field
+
+-- Imprime: journal si présent, sinon booktitle, sinon vide
+function Venue.print(entry)
+  local ok, err = pcall(function()
+    local et = Venue._get_type(entry)
+
+    if et == "article" then
+      local v = Venue._get_field(entry, "journal") or Venue._get_field(entry, "journaltitle")
+      Venue._emit(v or "")
+      return
+    elseif et == "inproceedings" then
+      local bt = Venue._get_field(entry, "booktitle")
+      local acro = Venue._extract_acronym(bt or "")
+      Venue._emit(acro or bt or "")
+      return
+    end
+
+    -- Fallback for other types or unknown:
+    local v =
+      Venue._get_field(entry, "journal") or
+      Venue._get_field(entry, "journaltitle") or
+      Venue._get_field(entry, "booktitle")
+    Venue._emit(v or "")
+  end)
+  if not ok then
+    Venue._emit("")
+    Venue._emit("% Venue.print error: "..tostring(err))
+  end
+end
+
+function Venue._get_type(entry)
+  -- pull a type string from entry and normalize
+  local raw = Venue._get_field and Venue._get_field(entry, "type") or nil
+  raw = raw or (type(entry.type)=="string" and entry.type) or (type(entry.entry_type)=="string" and entry.entry_type) or (type(entry.entryType)=="string" and entry.entryType) or ""
+  raw = tostring(raw):gsub("^@+","")           -- remove leading '@'
+  raw = raw:match("^[A-Za-z]+") or raw         -- take leading word
+  return (raw and raw:lower()) or ""
+end
+
+-- Extract a plausible acronym from a booktitle
+function Venue._extract_acronym(booktitle)
+  if not booktitle or booktitle == "" then return nil end
+  booktitle = Venue._unbrace(booktitle)
+  local blacklist = { IEEE = true, ACM = true }
+
+  local function split_on_delims(tok)
+    local parts = {}
+    for p in tok:gmatch("[^/%+%-%&]+") do table.insert(parts, p) end
+    return parts
+  end
+
+  local function collect_from(text, acc)
+    -- uppercase sequences with digits and common separators (ESEC/FSE, S&P, ICSE2024)
+    for tok in text:gmatch("(%u[%u%d/%+%-%&]+)") do
+      local keep, only_blacklisted = false, true
+      for _, part in ipairs(split_on_delims(tok)) do
+        part = part:upper()
+        if not blacklist[part] and part:match("%u") then keep = true end
+        if not blacklist[part] then only_blacklisted = false end
+      end
+      if keep and not only_blacklisted then table.insert(acc, tok) end
+    end
+  end
+
+  local candidates = {}
+  collect_from(booktitle, candidates)
+  for inside in booktitle:gmatch("%((.-)%)") do collect_from(inside, candidates) end
+
+  if #candidates == 0 then return nil end
+  table.sort(candidates, function(a,b) return #a > #b end) -- prefer longer (ESEC/FSE over FSE)
+  return candidates[1]
+end
+
+
 -- =========================
 -- Abréviation des auteurs
 -- =========================
@@ -198,12 +404,41 @@ local function print_entry(i, library)
   local au = fval("author")
   local yr = fval("year")
   local ti = fval("title")
+  local ky = e.key or nil
+  local fi = fval("file")
 
+  if ky then
+    safe_texprint("\\bibkey{" .. ky .. "}")
+  end
+  safe_texprint("\\begin{insidebox}\n")
   if au then safe_texprint("\\noindent " .. shorten_authors(au):gsub("[\n\r]", " ") .. ". ") end
   if yr then safe_texprint("(" .. yr .. "). ") end
-  if ti then safe_texprint("\\titre{" .. ti .. "}") end
+  if ti then
+    if fi then
+      local filename = string.match(fi, ":(.-%.pdf):") or ""
+      safe_texprint("\\href{run:Documents/" .. filename .. "}{\\underLine{\\titre{" .. ti .. "}}}.")
+    else
+      safe_texprint("\\titre{" .. ti .. "}")
+    end
+  end
+  safe_texprint("\\textit{")
+  Venue.print(e)
+  safe_texprint("}")
+  
 
-  safe_texprint("\\vskip 1pt")
+  safe_texprint("\\vskip 12pt")
+  if fields["llmsummary"] then
+    safe_texprint("\\begin{longtable}{@{}p{0.5in}p{5.375in}@{}}")
+    --safe_texprint("{\\small \\og{}" .. convert(fields["llmsummary"].value) .. "\\fg{} \\raisebox{-2pt}{\\includegraphics[height=9pt]{chatgpt-seeklogo}}}\n")
+          safe_texprint("\\chatbox{} & ")
+        safe_texprint("\\begin{minipage}[t]{5.375in}\\vspace{-15pt}\\small")
+      --safe_texprint("\\begin{markdown}")
+      safe_texprint(convert(fields["llmsummary"].value or ""))
+      --safe_texprint("\\end{markdown}")
+      safe_texprint("\\end{minipage}")
+      safe_texprint("\\end{longtable}")
+
+  end
 
   -- Chaque champ comment-* -> une table (auteur | commentaire)
   for key, fld in pairs(fields) do
@@ -211,28 +446,27 @@ local function print_entry(i, library)
       local author = string.gsub(fld["name"], "comment%-", "")
 
       -- Table : colonnes p{…} + boîtes top-alignées des deux côtés
-      safe_texprint("\\begin{longtable}{@{}p{0.5in}p{5in}@{}}")
+      safe_texprint("\\begin{longtable}{@{}p{0.5in}p{5.375in}@{}}")
 
       -- Cellule 1 (gauche) : auteur dans \parbox[t]{0.5in}
-      safe_texprint(
-        "\\parbox[t]{0.5in}{\\vspace{0pt}" ..
-        "\\auteur{" .. author .. "}{darkorange}{lightgoldenrodyellow}" ..
-        "}"
-        .. " & "
-      )
+        safe_texprint(
+          "\\parbox[t]{0.5in}{\\vspace{0pt}" ..
+          "\\auteur{" .. author .. "}{darkorange}{lightgoldenrodyellow}" ..
+          "}"
+          .. " & "
+        )
 
       -- Cellule 2 (droite) : markdown dans une minipage top-alignée
-      safe_texprint("\\begin{minipage}[t]{5in}\\vspace{0pt}")
-      safe_texprint("\\begin{markdown}")
-      safe_texprint(fld.value or "")
-      safe_texprint("\\end{markdown}")
-      safe_texprint("\\end{minipage}\\\\\\hline")
-
+      safe_texprint("\\begin{minipage}[t]{5.375in}\\vspace{-15pt}\\small")
+      --safe_texprint("\\begin{markdown}")
+      safe_texprint("\\color{paleblack} " .. convert(fld.value or ""))
+      --safe_texprint("\\end{markdown}")
+      safe_texprint("\\end{minipage}")
       safe_texprint("\\end{longtable}")
     end
   end
-
-  safe_texprint("") -- séparation douce entre entrées
+  safe_texprint("\\end{insidebox}")
+  safe_texprint("\\vspace{10pt}") -- séparation douce entre entrées
 end
 
 -- =========================
